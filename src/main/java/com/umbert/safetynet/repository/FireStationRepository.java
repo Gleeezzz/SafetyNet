@@ -16,7 +16,6 @@ public class FireStationRepository {
     }
 
     public List<FireStation> findAllFireStations() {
-
         return dataHandler.getData().getFireStations();
     }
 
