@@ -1,7 +1,7 @@
 package com.umbert.safetynet.repository;
 
 import com.jsoniter.JsonIterator;
-import lombok.Data;
+import com.umbert.safetynet.model.Data;
 import org.apache.commons.io.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;

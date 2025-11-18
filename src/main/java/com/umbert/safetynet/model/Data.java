@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Data {
 
-    private List<Person> persons;
+    private List <Person> persons;
     private List <FireStation> firestations;
     private List <MedicalRecord> medicalrecords;
 
