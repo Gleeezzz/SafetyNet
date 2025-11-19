@@ -1,6 +1,9 @@
 package com.umbert.safetynet.model;
 
+import lombok.Getter;
+
 public class Person {
+    @Getter
     private String firstName;
     private String lastName;
     private String address;
@@ -23,7 +26,19 @@ public class Person {
         this.email = email;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getEmail() {
+        return email;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getPhone() {
+        return phone;
     }
 }

@@ -1,10 +1,14 @@
 package com.umbert.safetynet.repository;
 
+import com.umbert.safetynet.model.Data;
 import com.umbert.safetynet.model.Person;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Repository;
 
+import java.util.HashSet;
+import java.util.List; // ✅ BONNE IMPORTATION (Interface de Collection)
 import java.awt.*;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class PersonRepository {
@@ -14,7 +18,19 @@ public class PersonRepository {
         this.dataHandler = dataHandler;
     }
 
-    public List<Person> findAllPerson() {
+    public List<Person> findAllPersons() {
         return dataHandler.getData().getPersons();
     }
+
+    public List<String> getPhonesByAddresses(List<String> addresses) {
+        Set<String> addressSet = new HashSet<>(addresses);
+
+        Data data = dataHandler.getData();
+        return data.getPersons().stream()
+                .filter(person -> addressSet.contains(person.getAddress()))
+                .map(Person::getPhone)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
 }
