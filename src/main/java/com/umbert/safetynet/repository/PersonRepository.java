@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List; // ✅ BONNE IMPORTATION (Interface de Collection)
-import java.awt.*;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,5 +31,20 @@ public class PersonRepository {
                 .distinct()
                 .collect(Collectors.toList());
     }
+
+    public List<Person> findByAddress(String address) {
+        return dataHandler.getData().getPersons().stream()
+                .filter(person -> person.getAddress().equalsIgnoreCase(address))
+                .collect(Collectors.toList());
+    }
+
+
+    public List<Person> findByFullName(String firstName, String lastName) {
+        return dataHandler.getData().getPersons().stream()
+                .filter(person -> person.getFirstName().equalsIgnoreCase(firstName))
+                .filter(person -> person.getLastName().equalsIgnoreCase(lastName))
+                .collect(Collectors.toList());
+    }
+
 
 }

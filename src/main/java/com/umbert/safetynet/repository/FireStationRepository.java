@@ -27,6 +27,21 @@ public class FireStationRepository {
                 .map(FireStation::getAddress)
                 .collect(Collectors.toList());
     }
+
+    public List<FireStation> findAllFireStationsByNumber(Integer number) {
+        return dataHandler.getData().getFireStations().stream()
+                .filter(f -> f.getStation()
+                .equals(number.toString())).collect(Collectors.toList());
+    }
+
+    public FireStation findFireStationByNumber(String address   ) {
+        return dataHandler.getData().getFireStations().stream()
+                .filter(p -> p.getAddress().equals(address)).findFirst().orElseGet(() -> new FireStation());
+    }
+
+    public void save(FireStation fireStation) {
+
+    }
 }
 
 

@@ -47,4 +47,8 @@ public class MedicalRecord {
     public void setBirthdate(String birthdate) {
         this.birthdate = birthdate;
     }
+
+    public Object getFirstName() {
+        return  firstname;
+    }
 }
