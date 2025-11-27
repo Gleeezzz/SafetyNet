@@ -31,4 +31,8 @@ public class Data {
     public void setMedicalrecords(List<MedicalRecord> medicalrecords) {
         this.medicalrecords = medicalrecords;
     }
+
+    public List<MedicalRecord> getMedicalRecords() {
+        return medicalrecords;
+    }
 }

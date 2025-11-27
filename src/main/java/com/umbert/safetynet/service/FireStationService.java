@@ -4,6 +4,7 @@ package com.umbert.safetynet.service;
 import com.umbert.safetynet.model.FireStation;
 import com.umbert.safetynet.model.MedicalRecord;
 import com.umbert.safetynet.model.Person;
+import com.umbert.safetynet.repository.DataHandler;
 import com.umbert.safetynet.repository.FireStationRepository;
 import com.umbert.safetynet.repository.MedicalRecordsRepository;
 import com.umbert.safetynet.repository.PersonRepository;
@@ -20,6 +21,7 @@ import java.util.List;
 @Service
 public class FireStationService {
 
+
     @Autowired
     private FireStationRepository fireStationRepository;
 
@@ -27,6 +29,10 @@ public class FireStationService {
     private PersonRepository personRepository;
 
     private final MedicalRecordsRepository medicalRecordsRepository;
+    @Autowired
+    private DataHandler dataHandler;
+    @Autowired
+    private PersonService personService;
 
     public FireStationService(FireStationRepository fireStationRepository, PersonRepository personRepository, MedicalRecordsRepository medicalRecordsRepository) {
         this.fireStationRepository = fireStationRepository;
@@ -74,7 +80,7 @@ public class FireStationService {
                 MedicalRecord medicalRecord = medicalRecordsCointainsPerson(medicalRecords, person);
                 if (medicalRecord != null) {
                     if ((computeAge(medicalRecord.getBirthdate()) <= 18))
-                    childsCount++;
+                        childsCount++;
                 } else {
                     adultsCount++;
                 }
@@ -101,8 +107,7 @@ public class FireStationService {
 
     private MedicalRecord medicalRecordsCointainsPerson(List<MedicalRecord> medicalRecords, Person person) {
         for (MedicalRecord medicalRecord : medicalRecords) {
-            if (medicalRecord.getFirstName().equals(person.getFirstName())
-                    && medicalRecord.getLastName().equals(person.getLastName())) {
+            if (medicalRecord.getLastName().equals(person.getLastName())) {
                 return medicalRecord;
             }
         }
@@ -117,7 +122,7 @@ public class FireStationService {
 
 
     public List<FloodDto> flood(List<Integer> stationNumbers) {
-        List<FloodDto> result = new ArrayList<>();
+        List<FloodDto> allResults = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
         //Pour chaque numero de station
         for (Integer stationNumber : stationNumbers) {
@@ -128,9 +133,9 @@ public class FireStationService {
             for (FireStation fireStation : fireStations) {
                 String address = fireStation.getAddress();
 
-            //Recuperer toutes les personnes de cette adresse
-            List<Person> personAtAddress = personRepository.findByAddress(address);
-            List<FloodPersonDto> floodPersons = new ArrayList<>();
+                //Recuperer toutes les personnes de cette adresse
+                List<Person> personAtAddress = personRepository.findByAddress(address);
+                List<FloodDto.PersonFloodInfo> floodPersons = new ArrayList<>();
 
                 // Pour chaque personne
                 for (Person person : personAtAddress) {
@@ -143,33 +148,80 @@ public class FireStationService {
                         LocalDate birthdate = LocalDate.parse(medicalRecord.getBirthdate(), formatter);
                         int age = PersonService.calculateAge(birthdate, LocalDate.now());
 
-                        FloodPersonDto floodPerson = new FloodPersonDto(
+                        FloodDto.PersonFloodInfo floodPerson = new FloodDto.PersonFloodInfo(
                                 person.getFirstName(),
                                 person.getLastName(),
                                 person.getPhone(),
                                 age,
-                                List.of(medicalRecord.getMedications()),
-                                List.of(medicalRecord.getAllergies())
+                                medicalRecord.getMedications(),
+                                medicalRecord.getAllergies()
                         );
                         floodPersons.add(floodPerson);
                     }
                 }
 
-                // Créer le FloodDto pour cette adresse
-                FloodDto floodDto = new FloodDto(address, floodPersons);
-                result.add(floodDto);
+                // Créer le FloodDto avec les données
+                if (!floodPersons.isEmpty()) {
+                    FloodDto floodDto = new FloodDto(address, floodPersons);
+                    allResults.add(floodDto);
+                }
+
             }
         }
 
-        return result;
+        return allResults;
     }
 
     // ✅ MÉTHODE addFireStation IMPLÉMENTÉE
     public void addFireStation(FireStation fireStation) {
         fireStationRepository.save(fireStation);
     }
-}
 
+    public List<FireDto> getFireDtoByAdress(String address) {
+        List<FireStation> fireStations = dataHandler.getData().getFireStations();
+        List<MedicalRecord> medicalRecords = dataHandler.getData().getMedicalRecords();
+        List<Person> persons = dataHandler.getData().getPersons();
+
+        List<FireDto> result = new ArrayList<>();
+        for (FireStation fs : fireStations) {
+
+            // Si la fire station correspond à l'adresse recherchée
+            if (fs.getAddress().equals(address)) {
+                String stationNumber = fs.getStation();
+                //sauvegarde ce numéro dans une variable temporaire
+
+                // Parcours de toutes les personnes pour trouver celles à cette adresse
+                for (Person p : persons) {
+                    // Si la personne habite à l'adresse recherchée
+                    if (p.getAddress().equals(address)) {
+
+                        // Création d'un nouveau DTO pour cette personne
+                        FireDto dto = new FireDto();
+
+                        dto.setStation(stationNumber);
+                        dto.setPhoneNumber(p.getPhone());
+                        dto.setLastName(p.getLastName());
+
+                        // Parcours des dossiers médicaux pour trouver celui de cette personne
+                        for (MedicalRecord mr : medicalRecords) {
+
+                            // Si le dossier médical correspond à la personne
+                            if (p.getLastName().equals(mr.getLastName())) {
+                                dto.setAge(personService.computeAge(mr.getBirthdate()));
+                                dto.setAllergies(mr.getAllergies());
+                                dto.setMedications(mr.getMedications());
+                            }
+                        }
+
+                        result.add(dto);
+                    }
+                }
+            }
+        }
+        // Retour de la liste contenant tous les DTOs
+        return result;
+    }
+}
 
 
 

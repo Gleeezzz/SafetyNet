@@ -1,17 +1,16 @@
-package com.umbert.safetynet.model;
+package com.umbert.safetynet.service.dto;
 
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-public class MedicalRecord {
-    private String firstname;
+public class FireDto {
+    private String station;
+    private String phoneNumber;
+    private int age;
     private String lastName;
     private List<String> medications;
     private List<String> allergies;
-    private String birthdate;
+
 }
-
-
-

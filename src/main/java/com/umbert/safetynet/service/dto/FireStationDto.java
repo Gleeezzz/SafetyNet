@@ -43,7 +43,7 @@ public class FireStationDto {
         return null;
     }
 
-    public void setPeople(List<FireStationPersonDto> people) {
+    public void setPeople(List<FireStationPersonDto> people) {;
 
     }
 }

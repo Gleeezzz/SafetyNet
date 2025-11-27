@@ -2,6 +2,7 @@ package com.umbert.safetynet.controller;
 
 import com.umbert.safetynet.model.FireStation;
 import com.umbert.safetynet.service.FireStationService;
+import com.umbert.safetynet.service.dto.FireDto;
 import com.umbert.safetynet.service.dto.FireStationDto;
 import com.umbert.safetynet.service.dto.FloodDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,11 @@ public class FireStationController {
     @PostMapping("/firestation")
     public void addFirestation(@RequestBody FireStation fireStation) {
         fireStationService.addFireStation(fireStation);
+    }
+
+    @GetMapping ("fire")
+    public List<FireDto> getFireStation(@RequestParam String address) {
+        return fireStationService.getFireDtoByAdress(address);
     }
 }
 

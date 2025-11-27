@@ -39,12 +39,19 @@ public class PersonRepository {
     }
 
 
+
     public List<Person> findByFullName(String firstName, String lastName) {
-        return dataHandler.getData().getPersons().stream()
-                .filter(person -> person.getFirstName().equalsIgnoreCase(firstName))
-                .filter(person -> person.getLastName().equalsIgnoreCase(lastName))
+        List<Person> allPersons = dataHandler.getData().getPersons();
+
+        return allPersons.stream()
+                // 1. Vérification de null (optionnel mais très sûr)
+                .filter(person -> person.getFirstName() != null && person.getLastName() != null)
+                // 2. Comparaison robuste et insensible à la casse
+                .filter(person -> firstName.equalsIgnoreCase(person.getFirstName()))
+                .filter(person -> lastName.equalsIgnoreCase(person.getLastName()))
                 .collect(Collectors.toList());
     }
+
 
 
 }
