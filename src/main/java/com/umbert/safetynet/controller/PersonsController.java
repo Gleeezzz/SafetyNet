@@ -1,88 +1,67 @@
 package com.umbert.safetynet.controller;
 
-import com.umbert.safetynet.model.MedicalRecord;
 import com.umbert.safetynet.model.Person;
-import com.umbert.safetynet.repository.MedicalRecordsRepository;
+import com.umbert.safetynet.service.FireStationService;
 import com.umbert.safetynet.service.PersonService;
 import com.umbert.safetynet.service.dto.ChildAlertDto;
-import com.umbert.safetynet.service.dto.FloodDto;
-import com.umbert.safetynet.service.dto.PersonInfoDto;  // Ton package exact
+import com.umbert.safetynet.service.dto.PersonInfoDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @RestController
+@RequestMapping
+
 public class PersonsController {
 
+    @Autowired
+    private FireStationService fireStationService;
+
     private final PersonService personService;
-    //Injection du service
+
+    // Injection du service
     public PersonsController(PersonService personService) {
         this.personService = personService;
     }
 
-
-    //get all persons
-    @GetMapping("persons")
-    public List<Person> allPersons(){
-        return (List<Person>) personService.allPerson();
-    }
-
-    //get all emails
-    @GetMapping("community/Email")
-    public List<String> getEmails(){
-        return personService.getAllEmails();
+    // Get all persons
+    @GetMapping("/persons")
+    public List<Person> allPersons() {
+        return personService.allPerson();
     }
 
 
-    //get all email by city
-    @RequestMapping(value = "communityEmail", method = RequestMethod.GET)
-    public List<String> getEmails(@RequestParam(name = "city") String city){
-        return personService.findAllEmailsByCity(city);
+    // 2. Get child alert by address
+    @GetMapping("/childAlert")
+    public ResponseEntity<?> getChildAlert(@RequestParam String address) {
+        List<ChildAlertDto> result = personService.getChildAlertByAddress(address);
+
+        if (result == null || result.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        return ResponseEntity.ok(result);
     }
 
 
+    // 6. Get person info by firstName and lastName
     @GetMapping("/personinfo")
     public List<PersonInfoDto> getPersonInfo(
             @RequestParam String firstName,
             @RequestParam String lastName) {
-
-        MedicalRecordsRepository personRepository = null;
-        List<Person> persons = (List<Person>) personRepository.findByFirstNameAndLastName(firstName, lastName);
-
-        // Vérification null
-        if (persons == null || persons.isEmpty()) {
-            return new ArrayList<>();  // Retourne une liste vide au lieu de planter
-        }
-
-        List<PersonInfoDto> result = new ArrayList<>();
-
-        for (Person person : persons) {
-            MedicalRecordsRepository medicalRecordRepository = null;
-            MedicalRecord medicalRecord = medicalRecordRepository
-                    .findByFirstNameAndLastName(person.getFirstName(), person.getLastName());
-
-            if (medicalRecord != null) {  // Vérification aussi pour medicalRecord
-                PersonInfoDto dto = personService.getPersonInfoDTO(person, medicalRecord);
-                result.add(dto);
-            }
-        }
-
         return personService.getPersonInfo(firstName, lastName);
     }
 
 
-    @GetMapping("/childAlert")
-    public List<ChildAlertDto> getChildAlert(@RequestParam String address) {
-        List<ChildAlertDto>  result = personService.getChildAlertDto(address);
-
-        // Si aucun enfant trouvé, retourner une liste vide (ou 404 selon tes besoins)
-        return (result);
+    // 7. Get community emails by city (GARDE SEULEMENT CELUI-CI)
+    @GetMapping("/communityEmail")
+    public ResponseEntity<List<String>> getCommunityEmail(@RequestParam String city) {
+        List<String> emails = personService.findAllEmailsByCity(city);
+        return ResponseEntity.ok(emails);
     }
-
 }
-
-
-

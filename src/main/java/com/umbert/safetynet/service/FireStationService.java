@@ -11,6 +11,8 @@ import com.umbert.safetynet.repository.PersonRepository;
 import com.umbert.safetynet.service.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.Set;
+import java.util.HashSet;
 
 
 import java.time.LocalDate;
@@ -33,6 +35,7 @@ public class FireStationService {
     private DataHandler dataHandler;
     @Autowired
     private PersonService personService;
+
 
     public FireStationService(FireStationRepository fireStationRepository, PersonRepository personRepository, MedicalRecordsRepository medicalRecordsRepository) {
         this.fireStationRepository = fireStationRepository;
@@ -59,12 +62,13 @@ public class FireStationService {
         List<FireStationPersonDto> people = new ArrayList<>();
         result.setPeople(people);
 
+
         //get all stations by number
         List<FireStation> firestations = fireStationRepository.findAllFireStationsByNumber(number);
-        List<MedicalRecord> medicalRecords = medicalRecordsRepository.findAllMedicalRecords();
+        List<MedicalRecord> medicalRecords = dataHandler.getData().getMedicalRecords();
 
         //get all people
-        List<Person> persons = personRepository.findAllPersons();
+        List<Person> persons = dataHandler.getData().getPersons();
         Integer childsCount = 0;
         Integer adultsCount = 0;
         //Compare addresses and add results in FireStationDto
@@ -79,18 +83,19 @@ public class FireStationService {
 
                 MedicalRecord medicalRecord = medicalRecordsCointainsPerson(medicalRecords, person);
                 if (medicalRecord != null) {
-                    if ((computeAge(medicalRecord.getBirthdate()) <= 18))
+                    if ((personService.computeAge(medicalRecord.getBirthdate()) <= 18))
                         childsCount++;
                 } else {
                     adultsCount++;
                 }
+
+                result.getPeople().add(fireStationPersonDto);
             }
-            result.getPeople().add(fireStationPersonDto);
         }
 
 
-        result.setAdultCount(adultsCount);
-        result.setChildscount(childsCount);
+        result.setAdultsCount(adultsCount);
+        result.setChildrenCount(childsCount);
         return result;
     }
 
@@ -114,63 +119,7 @@ public class FireStationService {
         return null;
     }
 
-    private int computeAge(String birthdate) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        LocalDate birthDate = LocalDate.parse(birthdate, formatter);
-        return PersonService.calculateAge(birthDate, LocalDate.now());
-    }
 
-
-    public List<FloodDto> flood(List<Integer> stationNumbers) {
-        List<FloodDto> allResults = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        //Pour chaque numero de station
-        for (Integer stationNumber : stationNumbers) {
-            //Recuperer toutes les casernes avec ce numero
-            List<FireStation> fireStations = fireStationRepository.findAllFireStationsByNumber(stationNumber);
-
-            //Pour chaque caserne, recuperer les addresses
-            for (FireStation fireStation : fireStations) {
-                String address = fireStation.getAddress();
-
-                //Recuperer toutes les personnes de cette adresse
-                List<Person> personAtAddress = personRepository.findByAddress(address);
-                List<FloodDto.PersonFloodInfo> floodPersons = new ArrayList<>();
-
-                // Pour chaque personne
-                for (Person person : personAtAddress) {
-                    MedicalRecord medicalRecord = medicalRecordsRepository.findByFirstNameAndLastName(
-                            person.getFirstName(),
-                            person.getLastName()
-                    );
-
-                    if (medicalRecord != null) {
-                        LocalDate birthdate = LocalDate.parse(medicalRecord.getBirthdate(), formatter);
-                        int age = PersonService.calculateAge(birthdate, LocalDate.now());
-
-                        FloodDto.PersonFloodInfo floodPerson = new FloodDto.PersonFloodInfo(
-                                person.getFirstName(),
-                                person.getLastName(),
-                                person.getPhone(),
-                                age,
-                                medicalRecord.getMedications(),
-                                medicalRecord.getAllergies()
-                        );
-                        floodPersons.add(floodPerson);
-                    }
-                }
-
-                // Créer le FloodDto avec les données
-                if (!floodPersons.isEmpty()) {
-                    FloodDto floodDto = new FloodDto(address, floodPersons);
-                    allResults.add(floodDto);
-                }
-
-            }
-        }
-
-        return allResults;
-    }
 
     // ✅ MÉTHODE addFireStation IMPLÉMENTÉE
     public void addFireStation(FireStation fireStation) {

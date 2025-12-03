@@ -1,5 +1,8 @@
 package com.umbert.safetynet.service.dto;
 
+import lombok.Setter;
+
+@Setter
 public class HouseholdMemberDto {
     private String firstName;
     private String lastName;
@@ -16,15 +19,8 @@ public class HouseholdMemberDto {
         return firstName;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
     public String getLastName() {
         return lastName;
     }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
 }

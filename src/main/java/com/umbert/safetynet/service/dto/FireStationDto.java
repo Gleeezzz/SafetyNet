@@ -1,49 +1,56 @@
 package com.umbert.safetynet.service.dto;
 
 import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Data // Gère les getters/setters/equals/hashCode
 public class FireStationDto {
-    Integer adultsCount;
-    Integer childrenCount;
-    List<FireStationPersonDto> fireStationPersonDtos;
 
+    // 1. CHAMPS DE COMPTAGE : Les noms doivent correspondre aux setters utilisés dans le Service
+    private Integer adultsCount;
+    private Integer childrenCount; // Utilisation d'un nom de champ cohérent (childrenCount)
 
-    // String child, adults et lisyte de firestations
+    // 2. CHAMPS DE LA LISTE DE PERSONNES
+    // Cette liste est utilisée pour stocker les FireStationPersonDto.
+    // Elle est initialisée ici pour garantir qu'elle ne soit JAMAIS null, empêchant la NPE.
+    private List<FireStationPersonDto> people = new ArrayList<>();
 
-    private String children;
-    private String adults;
-    private List<FireStationDto> childrenList;
+    // -----------------------------------------------------------
 
+    // 3. CONSTRUCTEURS
+    // Ce constructeur par défaut est essentiel pour new FireStationDto() dans le Service
     public FireStationDto() {
-
     }
 
-    public FireStationDto(String children, String adults) {
-        this.children = children;
-        this.adults = adults;
-        this.childrenList = new ArrayList<FireStationDto>();
+    // 🛑 CONSTRUCTEUR INUTILE SUPPRIMÉ : Le constructeur avec (String children, String adults)
+    // est supprimé car il provoquait l'erreur "Expected 2 arguments but found 0" et utilisait des champs non standard.
+
+    // -----------------------------------------------------------
+
+    // 4. GETTERS ET SETTERS (Manuels pour contourner l'incohérence des noms historiques)
+
+    // Les setters sont renommés pour correspondre aux noms standards des champs (AdultsCount et ChildrenCount)
+    // Assurez-vous que votre service appelle setAdultsCount et setChildrenCount
+    // ou adaptez les méthodes du service pour correspondre à ces méthodes.
+
+    public void setChildrenCount(Integer childrenCount) {
+        this.childrenCount = childrenCount;
     }
 
-    public String getChildren() {
-        return children;
+    public void setAdultsCount(Integer adultsCount) {
+        this.adultsCount = adultsCount;
     }
 
-    public void setChildscount(Integer childsCount) {
+    // Méthodes pour la liste 'people' :
+
+    // 🛑 CORRECTION CRITIQUE (NPE) : Retourne le champ 'people' initialisé, JAMAIS null.
+    public List<FireStationPersonDto> getPeople() {
+        return people;
     }
 
-    public void setAdultCount(Integer adultsCount) {
-
-    }
-
-    public List<Object> getPeople() {
-        return null;
-    }
-
-    public void setPeople(List<FireStationPersonDto> people) {;
-
+    // Setter standard pour 'people'
+    public void setPeople(List<FireStationPersonDto> people) {
+        this.people = people;
     }
 }

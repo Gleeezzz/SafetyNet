@@ -11,12 +11,12 @@ public class PersonInfoDto {
     private String email;
     private int age;  // Changé de String à int
     private String address;
-    private String[] medications;
-    private String[] allergies;
+    private List<String> medications;
+    private List<String> allergies;
 
     // Constructeur corrigé (sans phone, et qui assigne les valeurs)
     public PersonInfoDto(String firstName, String lastName, int age, String address,
-                         String email, String[] medications, String[] allergies) {
+                         String email, List<String> medications, List<String> allergies) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.age = age;
@@ -30,11 +30,9 @@ public class PersonInfoDto {
     public PersonInfoDto() {
     }
 
-    public PersonInfoDto(String firstName, String lastName, int age, String address, String phone, String email, List<String> medications, List<String> allergies) {
+    //Getters and Setters
 
-    }
 
-    // Getters et Setters
     public String getFirstName() {
         return firstName;
     }
@@ -75,19 +73,22 @@ public class PersonInfoDto {
         this.address = address;
     }
 
-    public String[] getMedications() {
+    public List<String> getMedications() {
         return medications;
     }
 
-    public void setMedications(String[] medications) {
+    public void setMedications(List<String> medications) {
         this.medications = medications;
     }
 
-    public String[] getAllergies() {
+    public List<String> getAllergies() {
         return allergies;
     }
 
-    public void setAllergies(String[] allergies) {
+    public void setAllergies(List<String> allergies) {
         this.allergies = allergies;
     }
 }
+
+
+

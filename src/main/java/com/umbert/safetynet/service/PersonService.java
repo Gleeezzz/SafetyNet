@@ -6,16 +6,15 @@ import com.umbert.safetynet.model.Person;
 import com.umbert.safetynet.repository.FireStationRepository;
 import com.umbert.safetynet.repository.MedicalRecordsRepository;
 import com.umbert.safetynet.repository.PersonRepository;
-import com.umbert.safetynet.service.dto.ChildAlertDto;
-import com.umbert.safetynet.service.dto.FloodDto;
-import com.umbert.safetynet.service.dto.HouseholdMemberDto;
-import com.umbert.safetynet.service.dto.PersonInfoDto;
+import com.umbert.safetynet.service.dto.*;
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -30,6 +29,7 @@ public class PersonService {
         this.medicalRecordsRepository = medicalRecordsRepository;
         this.fireStationRepository = fireStationRepository;
     }
+
 
     public List<Person> allPerson() {
         return personRepository.findAllPersons();
@@ -55,38 +55,37 @@ public class PersonService {
     }
 
     public List<String> findAllEmailsByCity(String city) {
-        List<String> emails = new ArrayList<>();
-        List<Person> persons = personRepository.findAllPersons();
+        List<String> emails = new ArrayList<>();// Filtrer par ville et recuperer les emails
+        List<Person> persons = personRepository.findAllPersons();// Recuperer tout les personnes
         for (Person person : persons) {
-            if (person.getCity().equals(city)) {
-                emails.add(person.getEmail());
-
+            if (person.getCity() != null &&
+                    person.getCity().equalsIgnoreCase(city) &&
+                    person.getEmail() != null &&
+                    !person.getEmail().isEmpty()) {
+                // Éviter les doublons
+                if (!emails.contains(person.getEmail())) {
+                    emails.add(person.getEmail());
+                }
             }
         }
+
         return emails;
     }
 
-    //Liste de String numero de telephone
+    // ✅ Correction pour findPhoneByNumber
     public List<String> findPhoneByNumber(String number) {
         List<String> phones = new ArrayList<>();
         List<Person> persons = personRepository.findAllPersons();
-        List<FireStation> fireStations = fireStationRepository.findAllFireStations();
 
-        //Trouver toutes les addresses couvertes par cette caserne
-        List<String> addresses = new ArrayList<>();
-        for (FireStation fireStation : fireStations) {
-            if (fireStation.getStation().equals(number)) {
-                addresses.add(fireStation.getAddress());
-            }
-        }
+        // 1. Trouver toutes les addresses couvertes par cette caserne
+        List<String> addresses = fireStationRepository.findAllFireStations().stream()
+                .filter(fs -> fs.getStation().equals(number))
+                .map(FireStation::getAddress)
+                .collect(Collectors.toList());
 
-        //FOR EACH IMBRIQUER
+        // 2. Filtrer les personnes par adresse
         for (Person person : persons) {
-            for (String address : addresses) {
-
-            }
-            FireStation fireStation = new FireStation();
-            if (person.getAddress().equals(fireStation.getAddress())) {
+            if (addresses.contains(person.getAddress())) { // ✅ Vérifie si l'adresse est dans la liste
                 phones.add(person.getPhone());
             }
         }
@@ -94,210 +93,209 @@ public class PersonService {
     }
 
 
-    public PersonInfoDto getPersonInfoDTo(Person person, MedicalRecord medicalRecord) {
+    // La méthode doit retourner une LISTE !
+    public List<PersonInfoDto> getPersonInfo(String firstName, String lastName) {
+        List<PersonInfoDto> result = new ArrayList<>();
 
-        // ... (Code de vérification/recherche des repositories si vous l'avez déplacé ici)
+        // 1. Trouver toutes les personnes
+        List<Person> personList = personRepository.findByFullName(firstName, lastName);
 
-        // 1. Déclarer les variables de conversion (Maintenant au début)
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        LocalDate birthDate = LocalDate.parse(medicalRecord.getBirthdate(), formatter);
-
-        // 2. Calculer l'âge
-        LocalDate currentDate = LocalDate.now();
-        int age = calculateAge(birthDate, currentDate);
-
-        // 3. Retourner le DTO (La SEULE instruction de retour du DTO)
-        return new PersonInfoDto(
-                person.getFirstName(),
-                person.getLastName(),
-                age, // <-- Âge calculé
-                person.getAddress(),
-                person.getPhone(),
-                person.getEmail(),
-                medicalRecord.getMedications(),
-                medicalRecord.getAllergies()
-        );
-
-    }
-
-    public static int calculateAge(LocalDate birthDate, LocalDate currentDate) {
-
-        // La logique de calcul est correcte :
-        return Period.between(birthDate, currentDate).getYears();
-    }
-
-    public List<ChildAlertDto> getChildAlertDto(String address) {  // ← Pas de <HouseholdMemberDto> ici !
-        List<ChildAlertDto> result = new ArrayList<>();
-
-
-        //Recuperer toutes les personnes à cette adresse
-        List<Person> personsAtAddress = personRepository.findByAddress(address);
-        System.out.println("1509 Culver St" + address);
-        System.out.println("Jacob Boyd" + personsAtAddress.size());
-
-        if (personsAtAddress.isEmpty()) {
-            return result;
+        if (personList == null || personList.isEmpty()) {
+            return result; // Retourne une liste vide
         }
-        //Declaration et initialisation de formatter
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
-        //Pour chaque personne, calculer l'age et separer enfants/adultes
+        // 2. Boucle pour convertir chaque personne en DTO
+        for (Person person : personList) {
+            // ... (Logique pour récupérer MedicalRecord)
+            List<MedicalRecord> recordsFound = medicalRecordsRepository.findByFullName(
+                    person.getFirstName(),
+                    person.getLastName()
+            );
+
+            // Assurez-vous d'utiliser findFirst().orElse(null) pour l'extraction :
+            MedicalRecord medicalRecord = recordsFound.stream().findFirst().orElse(null);
+
+            // ... (Utilisation de la méthode de conversion)
+            PersonInfoDto dto = convertToPersonInfoDto(person, medicalRecord);
+            result.add(dto);
+        }
+
+        return result; // Retourne la liste
+    }
+
+    // Dans PersonService.java (dans la méthode convertToPersonInfoDto)
+
+    public PersonInfoDto convertToPersonInfoDto(Person person, MedicalRecord medicalRecord) {
+
+        PersonInfoDto dto = new PersonInfoDto();
+
+        // 🛑 CORRECTION 1 : Assignation des champs de l'objet Person
+        dto.setFirstName(person.getFirstName());
+        dto.setLastName(person.getLastName());
+        dto.setAddress(person.getAddress());
+        dto.setEmail(person.getEmail());
+
+        // 🛑 CORRECTION 2 : Logique pour l'âge et les listes (déjà faite, mais vérifiez qu'elle est là)
+        if (medicalRecord != null) {
+            // Logique pour l'âge, les médicaments et les allergies
+            // (Assurez-vous que computeAge est bien résolu en public dans PersonService)
+            int age = computeAge(medicalRecord.getBirthdate());
+            dto.setAge(age);
+            dto.setMedications(medicalRecord.getMedications());
+            dto.setAllergies(medicalRecord.getAllergies());
+        } else {
+            // Valeurs par défaut si le dossier médical est manquant
+            dto.setAge(0);
+            dto.setMedications(Collections.emptyList());
+            dto.setAllergies(Collections.emptyList());
+        }
+
+        return dto;
+    }
+
+    public List<ChildAlertDto> getChildAlertByAddress(String address) {
+        System.out.println("🔍 1509 Culver St: '" + address + "'");
+
+        // Récupérer toutes les personnes à cette adresse
+        List<Person> personsAtAddress = personRepository.findByAddress(address);
+        System.out.println("👥 Jacob Boyd: " + (personsAtAddress != null ? personsAtAddress.size() : 0));
+
+
+
+        if (personsAtAddress == null || personsAtAddress.isEmpty()) {
+            System.out.println("❌ DEBUG - Aucune personne trouvée à cette adresse");
+            return Collections.emptyList();
+        }
+
+        //Declaration de listes(utilisation Dtos externes)
+        List<ChildAlertDto> children = new ArrayList<>();// Liste pour stocker les enfants trouvés
+
+        List<Person> otherMembers = new ArrayList<>();// Liste pour stocker les autres membres du foyer
+
+        // Parcourir toutes les personnes
+        ChildAlertDto child = null;
         for (Person person : personsAtAddress) {
-            System.out.println("\n👤 Analyse de: " + person.getFirstName() + " " + person.getLastName());
 
-            MedicalRecord medicalRecord = medicalRecordsRepository.findByFirstNameAndLastName(person.getFirstName(), person.getLastName());
+            MedicalRecord medicalRecord = medicalRecordsRepository.findUniqueByFullName(
+                    person.getFirstName(),
+                    person.getLastName()
+            );
 
-            if (medicalRecord == null) {
-                System.out.println("Pas de dossier medical trouvé");
+            System.out.println("🔍 DEBUG - Medical record trouvé pour " + person.getFirstName() + ": " + (medicalRecord != null));
+
+
+            if (medicalRecord != null) {
+                int age = computeAge(medicalRecord.getBirthdate());
+
+                if (age <= 18) {
+                    // C'est un enfant
+                    child = new ChildAlertDto();
+                    child.setFirstName(person.getFirstName());
+                    child.setLastName(person.getLastName());
+                    child.setAge(age);
+                    children.add(child);
+                    //List<Person> houseHolds = new ArrayList<>();
+                } else {
+                    // C'est un adulte
+                    otherMembers.add(person);
+                }
+            }
+        }
+        // Si aucun enfant n'est trouvé, retourner une liste vide
+
+        if (children.isEmpty()) {
+            System.out.println("ℹ️ DEBUG - Aucun enfant trouvé à cette adresse");
+            return Collections.emptyList();
+        }
+
+        // Deuxième passe : ajouter les autres membres du foyer à chaque enfant
+        for (ChildAlertDto childDto : children) {
+            List<HouseholdMemberDto> householdMembers = new ArrayList<>();
+
+            for (Person member : otherMembers) {
+                HouseholdMemberDto householdMember = new HouseholdMemberDto();
+                householdMember.setFirstName(member.getFirstName());
+                householdMember.setLastName(member.getLastName());
+                householdMembers.add(householdMember);
+            }
+
+            childDto.setOtherMembers(householdMembers);
+        }
+        return children;
+    }
+
+
+public Map<String, List<FloodDto>> getFloodStations(List<Integer> stationNumbers) {
+    Map<String, List<FloodDto>> result = new HashMap<>();
+
+    for (Integer stationNumber : stationNumbers) {
+        // 1. Trouver toutes les adresses desservies par cette caserne
+        List<String> addresses = fireStationRepository.getAddressesByStation(stationNumber.toString());
+
+        List<FloodDto> floodData = new ArrayList<>();
+
+        for (String address : addresses) {
+            // 2. Pour chaque adresse, trouver les habitants
+            List<Person> persons = personRepository.findByAddress(address);
+            if (persons == null || persons.isEmpty()) {
                 continue;
             }
-            System.out.println("Dossier medical trouvé");
-            System.out.println("Date de naissance" + medicalRecord.getBirthdate());
 
-            // Conversion et calcul de l'age
-            LocalDate birthdate = LocalDate.parse(medicalRecord.getBirthdate(), formatter);
-            int age = PersonService.calculateAge(birthdate, LocalDate.now()); // Appel de la methode statique
-            System.out.println("Age calculé" + age);
-
-            if (age <= 18) { // Age inférieur ou egal à 18
-                System.out.println("C'est un enfant !");
-                // C'est un enfant - recuperer les autres membres du foyer
-                List<HouseholdMemberDto> householdMembers = new ArrayList<>();
-                for (Person otherPerson : personsAtAddress) {
-                    if (!otherPerson.equals(person)) {
-                        householdMembers.add(new HouseholdMemberDto(otherPerson.getFirstName(), otherPerson.getLastName()));
-                        System.out.println("Membre du foyer ajouté " + otherPerson.getFirstName());
-                    }
-                }
-
-                //Créer le DTO enfant avec la liste des autres membres
-                ChildAlertDto child = new ChildAlertDto(
-                        person.getFirstName(),
-                        person.getLastName(),
-                        age,
-                        householdMembers
-                );
-
-                //IMPORTANT: Ajouter l'enfant à la liste résultat
-                result.add(child);
-                System.out.println("Enfant ajouté" + person.getFirstName());
-            } else {
-                System.out.println("Adulte (age>18)");
-            }
-        }
-
-        System.out.println("Total enfants trovés" + result.size());
-        return result;
-    }
+            List<FloodDto.PersonFloodInfo> personInfos = new ArrayList<>();
 
 
-    // Dans PersonService.java (LA MÉTHODE MANQUANTE)
+            for (Person person : persons) {
+                // 3. Récupérer les infos médicales
+                List<MedicalRecord> recordsFound = medicalRecordsRepository
+                        .findByFullName(person.getFirstName(), person.getLastName());
 
-    public PersonInfoDto getPersonInfoDto(String firstName, String lastName) {
+                //Extraire l'objet unique (MedicalRecord) de la liste
+                MedicalRecord medicalRecord = recordsFound.stream().findFirst().orElse(null);
 
-        // 1. Recherche : Utiliser vos Repositories
-        // (Assurez-vous que findByFullName existe dans vos dépôts)
-        List<Person> personList = personRepository.findByFullName(firstName, lastName);
-        List<MedicalRecord> medicalRecordList = Collections.singletonList(medicalRecordsRepository.findByFirstNameAndLastName(firstName, lastName));
+                if (medicalRecord != null) {
+                    int age = computeAge(medicalRecord.getBirthdate());
+                    FloodDto.PersonFloodInfo personInfo = new FloodDto.PersonFloodInfo(
+                            person.getFirstName(),
+                            person.getLastName(),
+                            person.getPhone(),
+                            age,
+                            medicalRecord.getMedications(),
+                            medicalRecord.getAllergies()
+                    );
 
-        // Verification et extraction de l'objet unique
-        if (personList.isEmpty() || medicalRecordList.isEmpty()) {
-            return null; //Personne non trouvé
-        }
-
-        //Extrait le premier (et unique) element de la liste.
-        Person person = personList.get(0);
-        MedicalRecord medicalRecord = medicalRecordList.get(0);
-
-        // 2. Conversion : Appel de la méthode de conversion déjà existante
-        // Remarque : Votre méthode de conversion s'appelle 'getPersonInfoDTo' (avec DTo majuscule)
-        return getPersonInfoDTo(person, medicalRecord);
-    }
-
-    public <PersonInfoDTO> PersonInfoDTO getPersonInfoDTO(Person person, MedicalRecord medicalRecord) {
-        return null;
-    }
-
-    public List<PersonInfoDto> getPersonInfo(String firstName, String lastName) {
-        return null;
-    }
-
-    public Map<String, List<FloodDto>> getFloodStations(List<Integer> stationNumbers) {
-        Map<String, List<FloodDto>> result = new HashMap<>();
-
-        for (Integer stationNumber : stationNumbers) {
-            // 1. Trouver toutes les adresses desservies par cette caserne
-            List<String> addresses = fireStationRepository.getAddressesByStation(stationNumber.toString());
-
-            List<FloodDto> floodData = new ArrayList<>();
-
-            for (String address : addresses) {
-                // 2. Pour chaque adresse, trouver les habitants
-                List<Person> persons = personRepository.findByAddress(address);
-                if (persons == null || persons.isEmpty()) {
-                    continue;
-                }
-
-                List<FloodDto.PersonFloodInfo> personInfos = new ArrayList<>();
-
-                for (Person person : persons) {
-                    // 3. Récupérer les infos médicales
-                    MedicalRecord medicalRecord = medicalRecordsRepository
-                            .findByFirstNameAndLastName(person.getFirstName(), person.getLastName());
-
-                    if (medicalRecord != null) {
-                        int age = calculateAge(medicalRecord.getBirthdate());
-
-                        FloodDto.PersonFloodInfo personInfo = new FloodDto.PersonFloodInfo(
-                                person.getFirstName(),
-                                person.getLastName(),
-                                person.getPhone(),
-                                age,
-                                medicalRecord.getMedications(),
-                                medicalRecord.getAllergies()
-                        );
-
-                        personInfos.add(personInfo);
-                    }
-                }
-
-                // 4. Créer le FloodDto pour cette adresse
-                if (!personInfos.isEmpty()) {
-
-                    FloodDto floodDto = new FloodDto(address, personInfos);
-                    floodData.add(floodDto);
+                    personInfos.add(personInfo);
                 }
             }
 
-            // 5. Ajouter au résultat avec la station comme clé
-            result.put("Station " + stationNumber, floodData);
+            // 4. Créer le FloodDto pour cette adresse
+            if (!personInfos.isEmpty()) {
+
+                FloodDto floodDto = new FloodDto(address, personInfos);
+                floodData.add(floodDto);
+            }
         }
 
-        return result;
+        // 5. Ajouter au résultat avec la station comme clé
+        result.put("Station " + stationNumber, floodData);
     }
 
-    private int calculateAge(String birthdate) {
-        if (birthdate == null || birthdate.isEmpty()) {
-            return 0;
-        }
-        try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            LocalDate birthDate = LocalDate.parse(birthdate, formatter);
-            LocalDate now = LocalDate.now();
-            return Period.between(birthDate, now).getYears();
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
-    public int computeAge(String birthdateOfPerson) {
-        LocalDate dob = LocalDate.parse(birthdateOfPerson, DateTimeFormatter.ofPattern("MM/dd/yyyy"));
-        LocalDate curDate = LocalDate.now();
-        return Period.between(dob, curDate).getYears();
-    }
-
-
+    return result;
 }
+
+// Dans PersonService.java (méthode computeAge)
+
+public static int computeAge(String birthdateOfPerson) {
+    // 🛑 Modifiez le format pour qu'il corresponde à vos données (généralement dd/MM/yyyy dans ce projet)
+    LocalDate dob = LocalDate.parse(birthdateOfPerson, DateTimeFormatter.ofPattern("MM/dd/yyyy"));
+
+    LocalDate curDate = LocalDate.now();
+    return Period.between(dob, curDate).getYears();
+}
+}
+
+
+
+
 
 
 
